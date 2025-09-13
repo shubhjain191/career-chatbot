@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { CAREER_SYSTEM_PROMPT } from "@/backend/services/ai/prompt";
 import { getCareerCounselReply } from "@/backend/services/ai/groq";
 
@@ -11,9 +11,9 @@ const MessageSchema = z.object({
 type Message = z.infer<typeof MessageSchema>;
 
 export const aiRouter = router({
-    counsel: publicProcedure
+    counsel: protectedProcedure
         .input(z.object({ userInput: z.string().min(1), context: z.array(MessageSchema).optional()}))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
             const prior: Message[] = input.context ?? [];
             const messages: Message[] = [
                 { role: "system", content: CAREER_SYSTEM_PROMPT },
