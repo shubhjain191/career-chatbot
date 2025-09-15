@@ -61,4 +61,26 @@ export const sessionRouter = router({
                     }
                 });
             }),
+
+        delete: protectedProcedure
+            .input(z.object({ id: z.string() }))
+            .mutation(async ({ input, ctx }) => {
+                const { prisma, userId } = ctx;
+                // Only allow deleting user's own session
+                await prisma.chatSession.deleteMany({
+                    where: { id: input.id, userId },
+                });
+                return { success: true };
+            }),
+
+        rename: protectedProcedure
+            .input(z.object({ id: z.string(), title: z.string().min(1).max(200) }))
+            .mutation(async ({ input, ctx }) => {
+                const { prisma, userId } = ctx;
+                const updated = await prisma.chatSession.updateMany({
+                    where: { id: input.id, userId },
+                    data: { title: input.title },
+                });
+                return { success: updated.count > 0 };
+            }),
 });

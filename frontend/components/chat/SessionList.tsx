@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, MessageSquare } from "lucide-react";
+import { Trash2, Edit2 } from "lucide-react";
 
 interface SessionListProps {
     currentSessionId: string;
@@ -14,6 +15,10 @@ interface SessionListProps {
 
 export function SessionList({ currentSessionId, onSessionSelect, onNewSession }: SessionListProps) {
     const { data, isLoading } = trpc.session.list.useQuery({limit: 20});
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+    const [renamingTitle, setRenamingTitle] = useState("");
+    const deleteSession = trpc.session.delete.useMutation();
+    const renameSession = trpc.session.rename.useMutation();
 
     return (
         <div className="flex flex-col h-full space-y-4 p-4">
@@ -39,28 +44,54 @@ export function SessionList({ currentSessionId, onSessionSelect, onNewSession }:
                         {data?.items.map((session) => (
                             <Card 
                                 key={session.id} 
-                                onClick={() => onSessionSelect(session.id)}
                                 className={`
-                                    cursor-pointer transition-all duration-200 hover:shadow-md
+                                    cursor-pointer transition-all duration-200 hover:shadow-md relative
                                     ${currentSessionId === session.id 
                                         ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-md' 
                                         : 'hover:bg-gray-50'
                                     }
                                 `}
                             >
-                                <CardHeader className="py-4">
-                                    <CardTitle className="flex items-center gap-3 text-lg">
-                                        <MessageSquare className="w-5 h-5 text-blue-600" />
-                                        <span className="truncate">{session.title}</span>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="pb-4 pt-0">
-                                    <div className="text-sm text-gray-500 flex items-center gap-2">
-                                        <span>{session._count.messages} messages</span>
-                                        <span>•</span>
-                                        <span>{new Date(session.updatedAt).toLocaleDateString()}</span>
-                                    </div>
-                                </CardContent>
+                                <div onClick={() => onSessionSelect(session.id)}>
+                                    <CardHeader className="py-4">
+                                        <CardTitle className="flex items-center gap-3 text-lg">
+                                            <MessageSquare className="w-5 h-5 text-blue-600" />
+                                            {editingSessionId === session.id ? (
+                                                <input
+                                                    className="border rounded px-2 py-1 text-base"
+                                                    value={renamingTitle}
+                                                    onChange={e => setRenamingTitle(e.target.value)}
+                                                    onBlur={() => setEditingSessionId(null)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") {
+                                                            renameSession.mutate({ id: session.id, title: renamingTitle });
+                                                            setEditingSessionId(null);
+                                                        }
+                                                    }}
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <span className="truncate">{session.title}</span>
+                                            )}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="pb-4 pt-0">
+                                        <div className="text-sm text-gray-500 flex items-center gap-2">
+                                            <span>{session._count.messages} messages</span>
+                                            <span>•</span>
+                                            <span>{new Date(session.updatedAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </CardContent>
+                                </div>
+                                {/* Action buttons */}
+                                <div className="absolute top-3 right-3 flex gap-2 z-10">
+                                    <Button size="icon" variant="ghost" onClick={e => {e.stopPropagation(); setEditingSessionId(session.id); setRenamingTitle(session.title);}} title="Rename">
+                                        <Edit2 className="w-5 h-5 text-indigo-600" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" onClick={e => {e.stopPropagation(); deleteSession.mutate({ id: session.id });}} title="Delete">
+                                        <Trash2 className="w-5 h-5 text-red-500" />
+                                    </Button>
+                                </div>
                             </Card>
                         ))}
                     </div>

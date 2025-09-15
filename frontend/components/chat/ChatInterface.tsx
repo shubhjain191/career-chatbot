@@ -7,14 +7,18 @@ import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "../../hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function ChatInterface() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
   const [newSessionTitle, setNewSessionTitle] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
 
   const utils = trpc.useUtils();
+  const { toast } = useToast()
 
   const createSession = trpc.session.create.useMutation({
     onSuccess: (session) => {
@@ -38,36 +42,49 @@ export function ChatInterface() {
   const handleSendMessage = async (content: string) => {
     if (!currentSessionId) return;
 
+    // Optimistic UI: show user message immediately
+    const optimisticId = `optimistic-${Date.now()}`;
+    setOptimisticMessages((prev) => [
+      ...prev,
+      {
+        id: optimisticId,
+        role: "user",
+        content,
+        createdAt: new Date().toISOString(),
+        status: "sending",
+      },
+    ]);
+    setIsTyping(true);
+
     try {
-      // Add user message
       await addUserMessage.mutateAsync({
         sessionId: currentSessionId,
         content,
       });
 
-      // Get conversation context
       const sessionData = await utils.session.getById.fetch({ id: currentSessionId });
       const context = sessionData?.messages?.map((msg) => ({
         role: msg.role as "user" | "assistant" | "system",
         content: msg.content,
       })) || [];
 
-      // Get AI response
       const aiResponse = await counsel.mutateAsync({
         userInput: content,
         context,
       });
 
-      // Add assistant message
       await addAssistantMessage.mutateAsync({
         sessionId: currentSessionId,
         content: aiResponse.reply,
       });
 
-      // Refresh data
+      setOptimisticMessages([]);
+      setIsTyping(false);
       utils.message.listBySession.invalidate({ sessionId: currentSessionId });
       utils.session.list.invalidate();
     } catch (error) {
+      setIsTyping(false);
+      setOptimisticMessages([]);
       console.error("Error sending message:", error);
     }
   };
@@ -86,7 +103,7 @@ export function ChatInterface() {
         {currentSessionId ? (
           <>
             <div className="flex-1 flex flex-col justify-end">
-              <MessageList sessionId={currentSessionId} />
+              <MessageList sessionId={currentSessionId} isTyping={isTyping} pendingMessages={optimisticMessages} />
               <MessageInput
                 onSend={handleSendMessage}
                 disabled={addUserMessage.isPending || counsel.isPending}
