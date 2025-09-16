@@ -21,6 +21,10 @@
  **Other:** SuperJSON, React Query, Markdown rendering
 
 ---
+<img width="1838" height="829" alt="image" src="https://github.com/user-attachments/assets/de8e994e-e73b-4587-abb5-4b6e2aee2b6d" />
+<img width="1838" height="829" alt="Screenshot from 2025-09-16 09-49-51" src="https://github.com/user-attachments/assets/271bd85e-477a-4319-94c0-6e9fd8a29f59" />
+
+
 
 ## Getting Started (Local Development)
 
