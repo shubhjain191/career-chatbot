@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../api/auth/[...nextauth]/route";
-import { AuthCard } from "@/frontend/auth/components/AuthCard";
+import { AuthForm } from "@/frontend/auth/components/AuthForm";
 
 export default async function SignInPage() {
     const session = await getServerSession(authOptions);
@@ -12,7 +12,7 @@ export default async function SignInPage() {
 
 return (
     <main className="min-h-dvh grid place-items-center p-6">
-        <AuthCard />
+        <AuthForm />
     </main>
  );
 }
